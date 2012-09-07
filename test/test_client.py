@@ -1,8 +1,9 @@
 # -*- coding:utf-8 -*-
-'协议解析测试'
+'通信测试'
 
 import sys;sys.path.append('../src/')
 
+import logging;logging.getLogger().setLevel(logging.WARN) 
 import unittest
 import gevent
 from xiwangshe import client
@@ -13,8 +14,8 @@ from xiwangshe import TimeoutException
 notify_received = False
 class TestServer(Server):
     def __init__(self, url):
-        self.url = url
-    def on_request(request):
+        Server.__init__(self, url)
+    def on_request(self, request):
         if request.method == 'hi' :
             request.send_response(200, request.body)
             return
@@ -25,7 +26,7 @@ class TestServer(Server):
             request.send_response(200)
             return
 
-    def on_notify(notify):
+    def on_notify(self,  notify):
         if notify.method == 'hi':
             global notify_received
             notify_received = True
@@ -36,6 +37,7 @@ class DefaultTestCase(unittest.TestCase):
         self.url = ('localhost',4446) 
         self.server = TestServer(self.url)
         self.server.start()
+        gevent.sleep(0.1) 
 
     def tearDown(self):
         self.server.stop()
@@ -49,16 +51,18 @@ class DefaultTestCase(unittest.TestCase):
         self.assertEqual(rsp.request.method, 'hi')
         self.assertEqual(rsp.request.body, 'wawa')
 
+    #@unittest.skip('temp') 
     def test_send_notify(self):
         rsp = client.send_notify(url=self.url, method='hi', body='wawa')
         self.assertIsNone(rsp, 'notify应答不为空')
-        gevent.sleep(1)
+        gevent.sleep(0.1)
         self.assertTrue(notify_received)
 
 
+    #@unittest.skip('temp') 
     def test_send_timeout(self):
         with self.assertRaises(TimeoutException):
-            client.send_request(url=self.url, method='sleep', body='5', timeout=3)
+            client.send_request(url=self.url, method='sleep', body='6', timeout=1)
 
 
 

@@ -15,7 +15,7 @@ class TestServer(Server):
     def __init__(self, url):
         self.url = url
     def on_request(request):
-        if request.meghod == 'hi' :
+        if request.method == 'hi' :
             request.send_response(200, request.body)
             return
 
@@ -34,6 +34,11 @@ class TestServer(Server):
 class DefaultTestCase(unittest.TestCase):
     def setUp(self):
         self.url = ('localhost',4446) 
+        self.server = TestServer(self.url)
+        self.server.start()
+
+    def tearDown(self):
+        self.server.stop()
 
     def test_send_request(self):
         rsp = client.send_request(url=self.url, method='hi', body='wawa')

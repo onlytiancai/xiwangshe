@@ -5,6 +5,7 @@ import sys;sys.path.append('../src/')
 
 import logging;logging.getLogger().setLevel(logging.WARN) 
 import gevent
+from gevent.pool import Pool
 from xiwangshe import client
 from xiwangshe import Server
 from xiwangshe import TimeoutException
@@ -13,6 +14,7 @@ from datetime import datetime
 url = ('localhost', 4446)
 test_count = 100
 timeout_count = 0
+pool = Pool(300)
 
 import sys
 if len(sys.argv) == 2:
@@ -37,7 +39,7 @@ def test_sync_one():
 
 def test_sync():
     test_start_time = datetime.now()
-    jobs = [gevent.spawn(test_sync_one) for i in xrange(test_count)]
+    jobs = [pool.spawn(test_sync_one) for i in xrange(test_count)]
     gevent.joinall(jobs)
     print 'test_sync:send %s request take %s, timeout_count=%s' % (test_count, datetime.now() - test_start_time, timeout_count)
 

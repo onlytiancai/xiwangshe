@@ -50,3 +50,4 @@ def test_async():
     print 'send %s request take %s, timeout_count=%s' % (test_count, datetime.now() - test_start_time, timeout_count)
 
 test_sync()
+#1

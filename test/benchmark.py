@@ -1,9 +1,11 @@
 # -*- coding:utf-8 -*-
 '基准性能测试'
 
-import sys;sys.path.append('../src/')
+import sys
+sys.path.append('../src/')
 
-import logging;logging.getLogger().setLevel(logging.WARN) 
+import logging
+logging.getLogger().setLevel(logging.WARN)
 import gevent
 from gevent.pool import Pool
 from xiwangshe import client
@@ -20,15 +22,18 @@ import sys
 if len(sys.argv) == 2:
     test_count = int(sys.argv[1])
 
+
 class TestServer(Server):
     def __init__(self, url):
         Server.__init__(self, url)
+
     def on_request(self, request):
         request.send_response(200)
 
 server = TestServer(url)
 server.start()
-gevent.sleep(0.1) 
+gevent.sleep(0.1)
+
 
 def test_sync_one():
     try:
@@ -37,17 +42,21 @@ def test_sync_one():
         global timeout_count
         timeout_count += 1
 
+
 def test_sync():
     test_start_time = datetime.now()
     jobs = [pool.spawn(test_sync_one) for i in xrange(test_count)]
     gevent.joinall(jobs)
-    print 'test_sync:send %s request take %s, timeout_count=%s' % (test_count, datetime.now() - test_start_time, timeout_count)
+    print 'test_sync:send %s request take %s, timeout_count=%s' \
+            % (test_count, datetime.now() - test_start_time, timeout_count)
+
 
 def test_async():
     test_start_time = datetime.now()
-    jobs = [gevent.spawn(client.async_send_request, url, 'hi') for i in xrange(test_count)]
+    jobs = [gevent.spawn(client.async_send_request, url, 'hi')
+            for i in xrange(test_count)]
     gevent.joinall(jobs)
-    print 'send %s request take %s, timeout_count=%s' % (test_count, datetime.now() - test_start_time, timeout_count)
+    print 'send %s request take %s, timeout_count=%s' \
+            % (test_count, datetime.now() - test_start_time, timeout_count)
 
 test_sync()
-#1

@@ -119,7 +119,7 @@ class client(object):
     gevent.spawn(check_timeout_process)
 
     @staticmethod
-    def send_request(url, method, body='', timeout=30):
+    def async_send_request(url, method, body='', timeout=30):
         if not method[0] in string.ascii_letters: raise ValueError('method must letters prefix')
         seq = str(uuid.uuid1())
         to_send = '%s %s\r\n%s' % (method, seq, body)
@@ -132,8 +132,12 @@ class client(object):
         client.client_socket.sendto(to_send, url)
         logging.debug('client sendto:%s', url)
         client.sent_requests[seq] = msg
-        return msg.result.get()
+        return msg.result
 
+    @staticmethod
+    def send_request(url, method, body='', timeout=30):
+        result = client.async_send_request(url, method, body, timeout) 
+        return result.get()
     @staticmethod
     def send_notify(url, method, body='', timeout=30):
         if not method[0] in string.ascii_letters: raise ValueError('method must letters prefix')

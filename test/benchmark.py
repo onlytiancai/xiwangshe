@@ -14,7 +14,7 @@ from datetime import datetime
 url = ('localhost', 4446)
 test_count = 100
 timeout_count = 0
-pool = Pool(300)
+pool = Pool(100)
 
 import sys
 if len(sys.argv) == 2:

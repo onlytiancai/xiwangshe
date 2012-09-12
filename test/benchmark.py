@@ -43,7 +43,7 @@ def test_sync_one():
         timeout_count += 1
 
 
-def test_sync():
+def test_sync(test_count):
     test_start_time = datetime.now()
     jobs = [pool.spawn(test_sync_one) for i in xrange(test_count)]
     gevent.joinall(jobs)
@@ -51,7 +51,7 @@ def test_sync():
             % (test_count, datetime.now() - test_start_time, timeout_count)
 
 
-def test_async():
+def test_async(test_count):
     test_start_time = datetime.now()
     jobs = [gevent.spawn(client.async_send_request, url, 'hi')
             for i in xrange(test_count)]
@@ -59,4 +59,4 @@ def test_async():
     print 'send %s request take %s, timeout_count=%s' \
             % (test_count, datetime.now() - test_start_time, timeout_count)
 
-test_sync()
+test_sync(test_count)

@@ -11,9 +11,8 @@ setup(name='pyempty',
       author='onlytiancai',
       author_email='onlytiancai@gmail.com',
       packages=['xiwangshe'],
-      package_dir={'xiwangshe':'src/xiwangshe'},
-      package_data={'xiwangshe':['stuff']},
+      package_dir={'xiwangshe': 'src/xiwangshe'},
+      package_data={'xiwangshe': ['stuff']},
       license="Public domain",
       platforms=["any"],
-      url='https://github.com/onlytiancai/pyempty'
-     )
+      url='https://github.com/onlytiancai/pyempty')

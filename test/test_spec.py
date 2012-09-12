@@ -1,11 +1,13 @@
 # -*- coding:utf-8 -*-
 '协议解析测试'
 
-import sys;sys.path.append('../src/')
+import sys
+sys.path.append('../src/')
 
 from xiwangshe import parser
 from xiwangshe import message
 import unittest
+
 
 class DefaultTestCase(unittest.TestCase):
     def test_parse_request(self):
@@ -34,8 +36,9 @@ class DefaultTestCase(unittest.TestCase):
         self.assertEqual(msg.method, 'NOTIFY')
         self.assertEqual(msg.body, 'cccccc')
 
+
 def suite():
     return unittest.makeSuite(DefaultTestCase, "test")
 
 if __name__ == '__main__':
-    unittest.main(defaultTest='suite',verbosity=2)
+    unittest.main(defaultTest='suite', verbosity=2)

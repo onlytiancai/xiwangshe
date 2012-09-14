@@ -29,10 +29,13 @@ Client
     from xiwangshe import TimeoutException
 
     try:
-        client.send_request(url=('localhost', 4446),
-                            method='hi',
-                            body='onlytiancai',
-                            timeout=5)
+        response = client.send_request(url=('localhost', 4446),
+                                       method='hi',
+                                       body='onlytiancai',
+                                       timeout=5)
+        print response.status
+        print response.body
+        print response.request
     except TimeoutException, ex:
         print ex
 

@@ -35,10 +35,21 @@ class TestServer(Server):
             global notify_received
             notify_received = True
             return
+        if notify.method == 'give_me_request':
+            self.send_request(url=notify.remote_url, method='hehe')
+            return
+        if notify.method == 'give_me_notify':
+            self.send_notify(url=notify.remote_url, method='haha')
+            return
 
 
 class DefaultTestCase(unittest.TestCase):
     def setUp(self):
+        self.request_received = False
+        self.notify_received = False
+        client.on_request = self.on_request
+        client.on_notify = self.on_notify
+
         self.url = ('localhost', 4446)
         self.server = TestServer(self.url)
         self.server.start()
@@ -46,6 +57,22 @@ class DefaultTestCase(unittest.TestCase):
 
     def tearDown(self):
         self.server.stop()
+
+    def on_request(self, request):
+        self.request_received = True
+
+    def on_notify(self, notify):
+        self.notify_received = True
+
+    def test_client_receive_request(self):
+        client.send_notify(url=self.url, method='give_me_request', body='wawa')
+        gevent.sleep(0.1)
+        self.assertTrue(self.request_received)
+
+    def test_client_receive_notify(self):
+        client.send_notify(url=self.url, method='give_me_notify', body='wawa')
+        gevent.sleep(0.1)
+        self.assertTrue(self.notify_received)
 
     def test_send_request(self):
         rsp = client.send_request(url=self.url, method='hi', body='wawa')

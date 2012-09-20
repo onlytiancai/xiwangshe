@@ -81,65 +81,25 @@ class parser(object):
                        raw=method)
 
 
-def _receive_msg(socket):
-    data, remote_url = socket.recvfrom(MAX_MSG_SIZE)
-    logging.debug('receive data:"%s" %s', data, remote_url)
-    msg = parser.parse(data)
-    msg.remote_url = remote_url
-    msg.socket = socket
-    return msg
-
-
 class TimeoutException(Exception):
     pass
 
 
-class client(object):
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sent_requests = {}
+class EndPoint(object):
+    def __init__(self, url=None):
+        self.url = url
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sent_requests = {}
 
-    def receive_msg_process():
-        logging.info('receive_msg_process started')
-        while True:
-            try:
-                msg = _receive_msg(client.client_socket)
-                if msg.message_type == message.RESPONSE:
-                    if msg.seq in client.sent_requests:
-                        request = client.sent_requests.pop(msg.seq)
-                        msg.request = request
-                        request.result.set(msg)
-            except:
-                logging.exception('receive data error')
+    def _receive_msg(self):
+        data, remote_url = self.socket.recvfrom(MAX_MSG_SIZE)
+        logging.debug('receive data:"%s" %s', data, remote_url)
+        msg = parser.parse(data)
+        msg.remote_url = remote_url
+        msg.socket = self.socket
+        return msg
 
-    gevent.spawn(receive_msg_process)
-
-    def check_timeout_process():
-        logging.info('check_timeout_process started')
-        while True:
-            try:
-                now = datetime.now()
-                to_removes = []
-                logging.debug('check timeout:%s %s',
-                              now,
-                              len(client.sent_requests))
-                for seq in client.sent_requests:
-                    request = client.sent_requests[seq]
-                    if now - request.senttime > request.timeout:
-                        to_removes.append(seq)
-
-                logging.debug('will remove:%s', to_removes)
-                for seq in to_removes:
-                    request = client.sent_requests[seq]
-                    request.result.set_exception(TimeoutException())
-            except:
-                logging.exception('check_timeout_process error')
-            finally:
-                gevent.sleep(5)
-
-    gevent.spawn(check_timeout_process)
-
-    @staticmethod
-    def async_send_request(url, method, body='', timeout=30):
+    def async_send_request(self, url, method, body='', timeout=30):
         if not method[0] in string.ascii_letters:
             raise ValueError('method must letters prefix')
         seq = str(uuid.uuid1())
@@ -154,39 +114,35 @@ class client(object):
         msg.senttime = datetime.now()
         msg.timeout = timedelta(seconds=timeout)
         msg.result = AsyncResult()
-        client.client_socket.sendto(to_send, url)
+        self.socket.sendto(to_send, url)
         logging.debug('client sendto:%s', url)
-        client.sent_requests[seq] = msg
+        self.sent_requests[seq] = msg
         return msg.result
 
-    @staticmethod
-    def send_request(url, method, body='', timeout=30):
-        result = client.async_send_request(url, method, body, timeout)
+    def send_request(self, url, method, body='', timeout=30):
+        result = self.async_send_request(url, method, body, timeout)
         return result.get()
 
-    @staticmethod
-    def send_notify(url, method, body='', timeout=30):
+    def send_notify(self, url, method, body='', timeout=30):
         if not method[0] in string.ascii_letters:
             raise ValueError('method must letters prefix')
         to_send = '%s\r\n%s' % (method, body)
         if len(to_send) > MAX_MSG_SIZE:
             raise ValueError('to send data overflow')
-        client.client_socket.sendto(to_send, url)
+        self.socket.sendto(to_send, url)
         logging.debug('client sendto:%s', url)
 
-
-class Server(object):
-    def __init__(self, url):
-        self.url = url
-        self.server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-    def _start(self):
-        self.server.bind(self.url)
-        logging.info('server start')
+    def receive_msg_process(self):
+        logging.info('receive_msg_process started')
         while True:
             try:
-                msg = _receive_msg(self.server)
-                if msg.message_type == message.REQUEST:
+                msg = self._receive_msg()
+                if msg.message_type == message.RESPONSE:
+                    if msg.seq in self.sent_requests:
+                        request = self.sent_requests.pop(msg.seq)
+                        msg.request = request
+                        request.result.set(msg)
+                elif msg.message_type == message.REQUEST:
                     gevent.spawn(self.on_request, msg)
                 elif msg.message_type == message.NOTIFY:
                     gevent.spawn(self.on_notify, msg)
@@ -197,22 +153,65 @@ class Server(object):
                 if err.errno == 9:
                     break
                 raise
+            except gevent.GreenletExit:
+                break
+            except:
+                logging.exception('receive data error')
+
+    def check_timeout_process(self):
+        logging.info('check_timeout_process started')
+        while True:
+            try:
+                now = datetime.now()
+                to_removes = []
+                logging.debug('check timeout:%s %s',
+                              now,
+                              len(self.sent_requests))
+                for seq in self.sent_requests:
+                    request = self.sent_requests[seq]
+                    if now - request.senttime > request.timeout:
+                        to_removes.append(seq)
+
+                logging.debug('will remove:%s', to_removes)
+                for seq in to_removes:
+                    request = self.sent_requests[seq]
+                    request.result.set_exception(TimeoutException())
+            except:
+                logging.exception('check_timeout_process error')
+            finally:
+                gevent.sleep(5)
 
     def start(self):
-        self.receive_process = gevent.spawn(self._start)
+        logging.debug('server starting')
+        if self.url:
+            self.socket.bind(self.url)
+        self.receive_msg_thread = gevent.spawn(self.receive_msg_process)
+        self.check_timeout_thread = gevent.spawn(self.check_timeout_process)
 
     def stop(self):
+        logging.debug('server stoping')
         try:
-            self.server.close()
+            self.socket.close()
         except:
-            pass
+            logging.debug('socket close error')
         try:
-            self.receive_process.kill()
+            self.receive_msg_thread.kill()
         except:
-            pass
+            logging.debug('kill receive_msg_thread error')
+        try:
+            self.check_timeout_thread.kill()
+        except:
+            logging.debug('kill check_timeout_thread error')
 
-    def on_request(self, request):
+    def on_request(self, on_request):
         pass
 
-    def on_notify(self, notify):
+    def on_notify(self, on_notify):
         pass
+
+client = EndPoint()
+client.start()
+
+
+class Server(EndPoint):
+    pass

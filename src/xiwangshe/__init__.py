@@ -10,6 +10,17 @@ import uuid
 import string
 from datetime import datetime, timedelta
 
+try:
+    import msgpack
+    pack_msg, unpack_msg = msgpack.packb, msgpack.unpackb
+except ImportError:
+    try:
+        import simplejson as json
+    except ImportError:
+        import json
+    pack_msg, unpack_msg = json.dumps, json.loads
+
+
 __version__ = "0.1"
 MAX_MSG_SIZE = 1024
 
@@ -62,7 +73,7 @@ class parser(object):
         return message(message_type=message.REQUEST,
                        method=result.group(1),
                        seq=result.group(2),
-                       body=input.read(),
+                       body=unpack_msg(input.read()),
                        raw=result.group())
 
     @staticmethod
@@ -70,14 +81,14 @@ class parser(object):
         return message(message_type=message.RESPONSE,
                        status=int(result.group(1)),
                        seq=result.group(2),
-                       body=input.read(),
+                       body=unpack_msg(input.read()),
                        raw=result.group())
 
     @staticmethod
     def _make_notify(method, input):
         return message(message_type=message.NOTIFY,
                        method=method,
-                       body=input.read(),
+                       body=unpack_msg(input.read()),
                        raw=method)
 
 
@@ -103,7 +114,7 @@ class EndPoint(object):
         if not method[0] in string.ascii_letters:
             raise ValueError('method must letters prefix')
         seq = str(uuid.uuid1())
-        to_send = '%s %s\r\n%s' % (method, seq, body)
+        to_send = '%s %s\r\n%s' % (method, seq, pack_msg(body))
         if len(to_send) > MAX_MSG_SIZE:
             raise ValueError('to send data overflow')
 
@@ -126,7 +137,7 @@ class EndPoint(object):
     def send_notify(self, url, method, body='', timeout=30):
         if not method[0] in string.ascii_letters:
             raise ValueError('method must letters prefix')
-        to_send = '%s\r\n%s' % (method, body)
+        to_send = '%s\r\n%s' % (method, pack_msg(body))
         if len(to_send) > MAX_MSG_SIZE:
             raise ValueError('to send data overflow')
         self.socket.sendto(to_send, url)

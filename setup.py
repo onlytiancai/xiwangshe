@@ -4,7 +4,7 @@ sys.path.append('./src')
 from distutils.core import setup
 from xiwangshe import __version__
 
-setup(name='pyempty',
+setup(name='xiwangshe',
       version=__version__,
       description='基于UDP的可靠通信协议',
       long_description=open("README.md").read(),

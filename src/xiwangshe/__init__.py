@@ -43,6 +43,7 @@ class message(dict):
         return self.raw
 
     def send_response(self, status, body=''):
+        body = pack_msg(body)
         to_send = '%s %s\r\n%s' % (status, self.seq, body)
         if len(to_send) > MAX_MSG_SIZE:
             raise ValueError('to send data overflow')

@@ -15,4 +15,4 @@ setup(name='xiwangshe',
       package_data={'xiwangshe': ['stuff']},
       license="Public domain",
       platforms=["any"],
-      url='https://github.com/onlytiancai/pyempty')
+      url='https://github.com/onlytiancai/xiwangshe')
